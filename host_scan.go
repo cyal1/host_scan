@@ -140,6 +140,7 @@ func main() {
 		fmt.Println("Use -h show help!")
 		os.Exit(0)
 	}
+	// out to file pointer
 	var w *bufio.Writer
 	if *outputFile != ""{
 		if FileExist(*outputFile){
@@ -160,7 +161,7 @@ func main() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client:=&http.Client{
-		Timeout: time.Duration(timeout*1000),
+		Timeout: time.Duration(time.Duration(timeout) * time.Second),
 		Transport: tr,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse /* 不进入重定向 */
@@ -169,7 +170,7 @@ func main() {
 	// follow redirect
 	if *redirect{
 		client=&http.Client{
-			Timeout: time.Duration(8 * time.Second),
+			Timeout: time.Duration(time.Duration(timeout) * time.Second),
 			Transport: tr,
 		}
 	}
@@ -180,7 +181,7 @@ func main() {
 	var bruteList [][]string
 	for _,host:=range hostList{
 			for _,ip:=range ipList{
-					bruteList = append(bruteList, []string{strings.TrimSpace(ip), strings.TrimSpace(host)})
+				bruteList = append(bruteList, []string{strings.TrimSpace(ip), strings.TrimSpace(host)})
 			}
 	}
 

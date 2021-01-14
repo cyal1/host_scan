@@ -101,7 +101,6 @@ func write2File(w *bufio.Writer,i info)  {
 		_, err := w.WriteString(line)
 		if err!=nil{
 			panic(err)
-			os.Exit(-1)
 		}
 	//}
 }
@@ -168,6 +167,7 @@ func main() {
 		},
 	}
 	// follow redirect
+	fmt.Println(*redirect)
 	if *redirect{
 		client=&http.Client{
 			Timeout: time.Duration(time.Duration(timeout) * time.Second),

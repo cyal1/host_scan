@@ -5,8 +5,9 @@ go get -u github.com/cyal1/host_scan
 
 ## useage
 
-hostscan -i ip.txt -d host.txt
+`hostscan -i ip.txt -d host.txt`
 
+```
 Usage of hostscan:
   -d string
     	Domain/Host list file (required)
@@ -22,6 +23,7 @@ Usage of hostscan:
     	Request timeout (default 8)
   -ua string
     	User-Agent string (default "Mozilla/5.0(Linux;U;Android2.3.6;zh-cn;GT-S5660Build/GINGERBREAD)AppleWebKit/533.1(KHTML,likeGecko)Version/4.0MobileSafari/533.1MicroMessenger/4.5.255")
+```
 
 ![效果图](https://raw.githubusercontent.com/cyal1/host_scan/master/test.jpg)
 

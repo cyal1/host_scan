@@ -167,7 +167,7 @@ func main() {
 		},
 	}
 	// follow redirect
-	fmt.Println(*redirect)
+	// fmt.Println(*redirect)
 	if *redirect{
 		client=&http.Client{
 			Timeout: time.Duration(time.Duration(timeout) * time.Second),
@@ -181,6 +181,7 @@ func main() {
 	var bruteList [][]string
 	for _,host:=range hostList{
 			for _,ip:=range ipList{
+				// fmt.Println(strings.TrimSpace(ip), strings.TrimSpace(host))
 				bruteList = append(bruteList, []string{strings.TrimSpace(ip), strings.TrimSpace(host)})
 			}
 	}
@@ -189,15 +190,17 @@ func main() {
 	wg:=sync.WaitGroup{}
 	limit:=make(chan bool,*threads) // workers count
 	for _,item:=range bruteList{
+		// fmt.Println(item)
 		wg.Add(1)
 		limit <- true
-		go func([]string, *bufio.Writer) {
+		ip,host:=item[0],item[1]
+		go func(string,string, *bufio.Writer) {
 			defer func() {
 				wg.Done()
 				<- limit
 			}()
 			var infoList []info
-			infoList=sendRequests(client,info{ip:item[0],host:item[1]})
+			infoList=sendRequests(client,ip,host)
 			for _,i:=range infoList{
 				terminalOutput(i)
 				// write to file
@@ -205,7 +208,7 @@ func main() {
 					write2File(w,i)
 				}
 			}
-		}(item,w)
+		}(ip,host,w)
 	}
 	wg.Wait()
 }
@@ -234,12 +237,12 @@ func file2List(fileName string) (text []string){
 }
 
 
-func sendRequests(client *http.Client,i info) (ret []info){
+func sendRequests(client *http.Client,ip string, host string) (ret []info){
 	schemaHttp := "http://"
 	schemaHttps := "https://"
 	for _,schema:=range []string{schemaHttp, schemaHttps}{
-		req,_ := http.NewRequest(http.MethodGet,schema+i.ip+"/",nil)
-		req.Host = i.host
+		req,_ := http.NewRequest(http.MethodGet,schema+ip+"/",nil)
+		req.Host = host
 		req.Header.Set("User-Agent","Mozilla/5.0(Linux;U;Android2.3.6;zh-cn;GT-S5660Build/GINGERBREAD)AppleWebKit/533.1(KHTML,likeGecko)Version/4.0MobileSafari/533.1MicroMessenger/4.5.255")
 		resp,err:=client.Do(req)
 		if err!=nil{
@@ -251,9 +254,9 @@ func sendRequests(client *http.Client,i info) (ret []info){
 			location = resp.Header.Get("Location")
 		}
 		ret = append(ret,info{
-			ip:i.ip,
-			host:i.host,
-			url: schema+i.host+"/",
+			ip:ip,
+			host:host,
+			url: schema+host+"/",
 			status: resp.StatusCode,
 			length: resp.ContentLength,
 			title: getTitle(resp),

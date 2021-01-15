@@ -102,6 +102,7 @@ func write2File(w *bufio.Writer,i info)  {
 		if err!=nil{
 			panic(err)
 		}
+		w.Flush()
 	//}
 }
 
@@ -124,7 +125,7 @@ func FileExist(path string) bool {
 }
 
 
-
+var userAgent *string
 func main() {
 	// flag logic
 	var timeout int
@@ -134,6 +135,7 @@ func main() {
 	threads:=flag.Int("threads",50,"Threads/Goroutine number")
 	flag.IntVar(&timeout,"timeout",8,"Request timeout")
 	redirect:=flag.Bool("redirect",false,"Follow redirects")
+	userAgent=flag.String("ua","Mozilla/5.0(Linux;U;Android2.3.6;zh-cn;GT-S5660Build/GINGERBREAD)AppleWebKit/533.1(KHTML,likeGecko)Version/4.0MobileSafari/533.1MicroMessenger/4.5.255","User-Agent string")
 	flag.Parse()
 	if *ipFile=="" || *hostFile==""{
 		fmt.Println("Use -h show help!")
@@ -152,7 +154,6 @@ func main() {
 		}
 		defer f.Close()
 		w = bufio.NewWriter(f)
-		defer w.Flush()
 	}
 
 	// skip verify cert
@@ -243,7 +244,7 @@ func sendRequests(client *http.Client,ip string, host string) (ret []info){
 	for _,schema:=range []string{schemaHttp, schemaHttps}{
 		req,_ := http.NewRequest(http.MethodGet,schema+ip+"/",nil)
 		req.Host = host
-		req.Header.Set("User-Agent","Mozilla/5.0(Linux;U;Android2.3.6;zh-cn;GT-S5660Build/GINGERBREAD)AppleWebKit/533.1(KHTML,likeGecko)Version/4.0MobileSafari/533.1MicroMessenger/4.5.255")
+		req.Header.Set("User-Agent",*userAgent)
 		resp,err:=client.Do(req)
 		if err!=nil{
 			// log.Println(err) // cancel this comment show more info

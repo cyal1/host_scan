@@ -126,14 +126,13 @@ func FileExist(path string) bool {
 
 
 var userAgent *string
-var filter_length *string
 func main() {
 	// flag logic
 	var timeout int
 	ipFile:=flag.String("i","","IP list file (required)")
 	hostFile:=flag.String("d","","Host/Domain list file (required)")
-	filter_length=flag.String("fl","","Filter by length of response. Comma-separated list of length like 0,123")
 	outputFile:=flag.String("output","","Output file")
+	filterLength := flag.String("fl","","Filter by length of response. Comma-separated list of length like 0,123")
 	suffix:=flag.String("suffix","","Append a suffix to each line of the host list")
 	threads:=flag.Int("threads",50,"Threads/Goroutine number")
 	flag.IntVar(&timeout,"timeout",8,"Request timeout")
@@ -212,7 +211,7 @@ func main() {
 			}
 			infoList=sendRequests(client,ip,host)
 			for _,i:=range infoList{
-				if fl := *filter_length; fl != ""{
+				if fl := *filterLength; fl != ""{
 					if IsContain(strings.Split(fl,","),i.length){
 						continue
 					}

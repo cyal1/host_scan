@@ -126,11 +126,13 @@ func FileExist(path string) bool {
 
 
 var userAgent *string
+var filter_length *string
 func main() {
 	// flag logic
 	var timeout int
 	ipFile:=flag.String("i","","IP list file (required)")
 	hostFile:=flag.String("d","","Host/Domain list file (required)")
+	filter_length=flag.String("fl","","Filter by length of response. Comma-separated list of length like 0,123")
 	outputFile:=flag.String("output","","Output file")
 	suffix:=flag.String("suffix","","Append a suffix to each line of the host list")
 	threads:=flag.Int("threads",50,"Threads/Goroutine number")
@@ -210,6 +212,11 @@ func main() {
 			}
 			infoList=sendRequests(client,ip,host)
 			for _,i:=range infoList{
+				if fl := *filter_length; fl != ""{
+					if IsContain(strings.Split(fl,","),i.length){
+						continue
+					}
+				}
 				terminalOutput(i)
 				// write to file
 				if w!=nil{
@@ -273,4 +280,21 @@ func sendRequests(client *http.Client,ip string, host string) (ret []info){
 		})
 	}
 	return  ret
+}
+
+func IsContain(items []string, item int64) bool {
+	for _, eachItem := range items {
+		if eachItem == ""{
+			continue
+		}
+		fli, err := strconv.ParseInt(eachItem,10,64)
+		if err!=nil{
+			fmt.Println("fl needs comma-separated list of length(number)")
+			os.Exit(-1)
+		}
+		if fli == item {
+			return true
+		}
+	}
+	return false
 }

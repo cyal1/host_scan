@@ -130,8 +130,9 @@ func main() {
 	// flag logic
 	var timeout int
 	ipFile:=flag.String("i","","IP list file (required)")
-	hostFile:=flag.String("d","","Domain/Host list file (required)")
+	hostFile:=flag.String("d","","Host/Domain list file (required)")
 	outputFile:=flag.String("output","","Output file")
+	suffix:=flag.String("suffix","","Append a suffix to each line of the host list")
 	threads:=flag.Int("threads",50,"Threads/Goroutine number")
 	flag.IntVar(&timeout,"timeout",8,"Request timeout")
 	redirect:=flag.Bool("redirect",false,"Follow redirects")
@@ -201,6 +202,12 @@ func main() {
 				<- limit
 			}()
 			var infoList []info
+			if suf:= *suffix;suf != ""{
+				if !strings.HasPrefix(*suffix,"."){
+					suf = "." + *suffix
+				}
+				host += suf
+			}
 			infoList=sendRequests(client,ip,host)
 			for _,i:=range infoList{
 				terminalOutput(i)

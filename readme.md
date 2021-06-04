@@ -7,6 +7,8 @@
 
 `hostscan -i ip.txt -d host.txt`
 
+Before use hostscan, recommend `sort -u ip.txt -o ip_uniq.txt`
+
 ```
 Usage of hostscan:
 -d string
@@ -30,6 +32,11 @@ Usage of hostscan:
 ```
 
 ![效果图](https://raw.githubusercontent.com/cyal1/host_scan/master/test.jpg)
+
+## TODO
+
+CIDR support
+
 
 ## Reference
 https://github.com/fofapro/Hosts_scan

@@ -36,6 +36,7 @@ Usage of hostscan:
 ## TODO
 
 CIDR support
+add `-path` flag 
 
 
 ## Reference

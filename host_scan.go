@@ -24,6 +24,7 @@ type info struct {
 	length int64
 	title string
 	location string
+	content []byte
 	//Type string
 }
 
@@ -33,8 +34,8 @@ func terminalOutput(i info){
 	yellow := color.FgYellow.Render
 	red := color.FgRed.Render
 	//color.FgDefault.Render()
-	var status string = strconv.Itoa(i.status)
-	var title string = i.title
+	var status = strconv.Itoa(i.status)
+	var title = i.title
 	var location = i.location
 	var length = strconv.Itoa(int(i.length))
 	if status[0] == '2' {
@@ -75,7 +76,7 @@ func terminalOutput(i info){
 }
 
 
-func write2File(w *bufio.Writer,i info)  {
+func write2File(w *bufio.Writer, i info)  {
 	//for _,i:=range iList{
 		var line string
 		if i.status/100 == 3 {
@@ -102,7 +103,7 @@ func write2File(w *bufio.Writer,i info)  {
 		if err!=nil{
 			panic(err)
 		}
-		w.Flush()
+		_ = w.Flush()
 	//}
 }
 
@@ -132,8 +133,11 @@ func main() {
 	ipFile:=flag.String("i","","IP list file (required)")
 	hostFile:=flag.String("d","","Host/Domain list file (required)")
 	outputFile:=flag.String("output","","Output file")
-	filterLength := flag.String("fl","","Filter by length of response. Comma-separated list of length like 0,123")
+	filterLength := flag.String("fl","","Filter by comma separated of content-length code (example '133,14213')")
+	filterStatusCode := flag.String("fc","","Filter by comma separated of status code (example '403,404')")
+	filterString := flag.String("fs","","Filter by string in response, support for regex (example '(?i)(nginx|table)')")
 	suffix:=flag.String("suffix","","Append a suffix to each line of the host list")
+	paths:=flag.String("paths","/","Comma separated paths (example '/api/v1,/api/v2')")
 	threads:=flag.Int("threads",50,"Threads/Goroutine number")
 	flag.IntVar(&timeout,"timeout",8,"Request timeout")
 	redirect:=flag.Bool("redirect",false,"Follow redirects")
@@ -163,7 +167,7 @@ func main() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client:=&http.Client{
-		Timeout: time.Duration(time.Duration(timeout) * time.Second),
+		Timeout:   time.Duration(timeout) * time.Second,
 		Transport: tr,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse /* 不进入重定向 */
@@ -173,7 +177,7 @@ func main() {
 	// fmt.Println(*redirect)
 	if *redirect{
 		client=&http.Client{
-			Timeout: time.Duration(time.Duration(timeout) * time.Second),
+			Timeout: time.Duration(timeout) * time.Second,
 			Transport: tr,
 		}
 	}
@@ -192,6 +196,7 @@ func main() {
 	// start goroutine
 	wg:=sync.WaitGroup{}
 	limit:=make(chan bool,*threads) // workers count
+	var mu sync.RWMutex
 	for _,item:=range bruteList{
 		// fmt.Println(item)
 		wg.Add(1)
@@ -209,17 +214,45 @@ func main() {
 				}
 				host += suf
 			}
-			infoList=sendRequests(client,ip,host)
+			if paths:=*paths; paths != ""{
+				for _, path :=  range strings.Split(paths,","){
+					infoList = append(infoList, sendRequests(client, ip, host, strings.TrimSpace(path))...)
+				}
+			}else{
+				infoList = sendRequests(client,ip,host,"/")
+			}
 			for _,i:=range infoList{
 				if fl := *filterLength; fl != ""{
 					if IsContain(strings.Split(fl,","),i.length){
 						continue
 					}
 				}
+				if fc := *filterStatusCode; fc != ""{
+					var flc = false
+					for _, code := range strings.Split(fc,","){
+						if strings.TrimSpace(code) == strconv.Itoa(i.status) {
+							flc = true
+							break
+						}
+					}
+					if flc == true{
+						continue
+					}
+				}
+
+				if fs := *filterString; fs != ""{
+					//fmt.Println(string(i.content))
+					reg := regexp.MustCompile(fs)
+					if reg.Match(i.content){
+						continue
+					}
+				}
 				terminalOutput(i)
 				// write to file
 				if w!=nil{
-					write2File(w,i)
+					mu.Lock()
+					write2File(w, i)
+					mu.Unlock()
 				}
 			}
 		}(ip,host,w)
@@ -234,7 +267,7 @@ func file2List(fileName string) (text []string){
 		panic(err)
 	}
 	defer file.Close()
-	//content, err := ioutil.ReadAll(file)
+	//content, err := util.ReadAll(file)
 	//if err !=nil{
 	//	panic(err)
 	//}
@@ -242,7 +275,7 @@ func file2List(fileName string) (text []string){
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
-		var line string =strings.TrimSpace(scanner.Text())
+		var line =strings.TrimSpace(scanner.Text())
 		if line!="" && !strings.HasPrefix(line,"//") && !strings.HasPrefix(line,"#"){
 			text = append(text, line)
 		}
@@ -251,30 +284,32 @@ func file2List(fileName string) (text []string){
 }
 
 
-func sendRequests(client *http.Client,ip string, host string) (ret []info){
+func sendRequests(client *http.Client,ip string, host string, path string) (ret []info){
 	schemaHttp := "http://"
 	schemaHttps := "https://"
 	for _,schema:=range []string{schemaHttp, schemaHttps}{
-		req,_ := http.NewRequest(http.MethodGet,schema+ip+"/",nil)
+		req,_ := http.NewRequest(http.MethodGet, schema + ip + path, nil)
 		req.Host = host
-		req.Header.Set("User-Agent",*userAgent)
-		resp,err:=client.Do(req)
+		req.Header.Set("User-Agent", *userAgent)
+		resp, err:=client.Do(req)
 		if err!=nil{
 			// log.Println(err) // cancel this comment show more info
 			continue
 		}
-		var location string= ""
+		content, _ := ioutil.ReadAll(resp.Body)
+		var location = ""
 		if resp.StatusCode/100 == 3 {
 			location = resp.Header.Get("Location")
 		}
 		ret = append(ret,info{
 			ip:ip,
 			host:host,
-			url: schema+host+"/",
+			url: schema+host + path,
 			status: resp.StatusCode,
 			length: resp.ContentLength,
 			title: getTitle(resp),
 			location: location,
+			content: content,
 			//Type: resp.Header.Get("Content-Type"),
 		})
 	}

@@ -25,7 +25,7 @@ Usage of hostscan:
   -fc string
         Filter by comma separated of status code (example '403,404')
   -fl string
-        Filter by comma separated of content-length code (example '133,14213')
+        Filter by comma separated of content-length (example '133,14213')
   -fs string
         Filter by string in response, support for regex (example '(?i)(nginx|table)')
   -i string

@@ -21,7 +21,7 @@ type info struct {
 	host string
 	url string
 	status int
-	length int64
+	length int
 	title string
 	location string
 	content []byte
@@ -37,7 +37,7 @@ func terminalOutput(i info){
 	var status = strconv.Itoa(i.status)
 	var title = i.title
 	var location = i.location
-	var length = strconv.Itoa(int(i.length))
+	var length = strconv.Itoa(i.length)
 	if status[0] == '2' {
 		status = green(status)
 		title = green(title)
@@ -109,9 +109,9 @@ func write2File(w *bufio.Writer, i info)  {
 
 
 // get title
-func getTitle(resp *http.Response)  (title string){
-	respByte, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
+func getTitle(respByte []byte)  (title string){
+	// respByte, _ := ioutil.ReadAll(resp.Body)
+	// defer resp.Body.Close()
 	reg, _ := regexp.Compile(`(?Ui:<title>[\s ]*([\s\S]*)[\s ]*</?title>)`)
 	m := reg.FindStringSubmatch(string(respByte))
 	if len(m) != 0 {
@@ -223,7 +223,7 @@ func main() {
 			}
 			for _,i:=range infoList{
 				if fl := *filterLength; fl != ""{
-					if IsContain(strings.Split(fl,","),i.length){
+					if IsContain(strings.Split(fl, ","), i.length){
 						continue
 					}
 				}
@@ -291,23 +291,26 @@ func sendRequests(client *http.Client,ip string, host string, path string) (ret 
 		req,_ := http.NewRequest(http.MethodGet, schema + ip + path, nil)
 		req.Host = host
 		req.Header.Set("User-Agent", *userAgent)
-		resp, err:=client.Do(req)
-		if err!=nil{
+		resp, err := client.Do(req)
+		if err != nil{
 			// log.Println(err) // cancel this comment show more info
 			continue
 		}
 		content, _ := ioutil.ReadAll(resp.Body)
+		// fmt.Println(string(content))
 		var location = ""
 		if resp.StatusCode/100 == 3 {
 			location = resp.Header.Get("Location")
 		}
+		// fmt.Println(resp)
 		ret = append(ret,info{
 			ip:ip,
 			host:host,
 			url: schema+host + path,
 			status: resp.StatusCode,
-			length: resp.ContentLength,
-			title: getTitle(resp),
+			// length: resp.ContentLength,
+			length: len(content), // no content-length header condition
+			title: getTitle(content),
 			location: location,
 			content: content,
 			//Type: resp.Header.Get("Content-Type"),
@@ -316,12 +319,12 @@ func sendRequests(client *http.Client,ip string, host string, path string) (ret 
 	return  ret
 }
 
-func IsContain(items []string, item int64) bool {
+func IsContain(items []string, item int) bool {
 	for _, eachItem := range items {
 		if eachItem == ""{
 			continue
 		}
-		fli, err := strconv.ParseInt(eachItem,10,64)
+		fli, err := strconv.Atoi(eachItem)
 		if err!=nil{
 			fmt.Println("fl needs comma-separated list of length(number)")
 			os.Exit(-1)

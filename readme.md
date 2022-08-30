@@ -51,6 +51,7 @@ Usage of hostscan:
 ## TODO
 
 CIDR support
+结果去重
 
 ## Reference
 https://github.com/fofapro/Hosts_scan
